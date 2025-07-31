@@ -5,7 +5,8 @@ from typing import Optional
 
 import click
 
-from .config import load_config
+from tachi.config import load_config
+from tachi.azure_generator import AzureGenerator
 
 
 @click.group()
@@ -38,8 +39,18 @@ def generate(config: Optional[str], output: str):
             click.echo(f"Strategy: {project_config.strategy}")
             click.echo(f"Services: {len(project_config.services)}")
             click.echo(f"Output directory: {output_dir.absolute()}")
-            # TODO: Implement actual generation
-            click.echo("Generation complete! (placeholder)")
+            
+            # Get template directory
+            template_dir = Path(__file__).parent / "templates" / "azure"
+            
+            # Generate files
+            generator = AzureGenerator(template_dir)
+            generator.generate(project_config, output_dir)
+            
+            click.echo("✓ Generation complete!")
+            click.echo(f"  - Created .github/workflows/ directory")
+            click.echo(f"  - Created container-apps/configs/ directory")
+            click.echo(f"  - Generated SETUP.md with instructions")
         except Exception as e:
             click.echo(f"Error loading configuration: {e}", err=True)
             raise SystemExit(1)
