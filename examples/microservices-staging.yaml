@@ -1,0 +1,46 @@
+# Microservices application with staging environment
+# Uses trunk-release-stage strategy:
+# - PRs create dynamic environments
+# - Merges to main deploy to staging
+# - Tags (v*) deploy to production
+
+name: microservices
+strategy: trunk-release-stage
+
+azure:
+  resource_group: rg-microservices
+  registry: microservicesreg
+  location: westus2
+  log_analytics_workspace_id: ${LOG_ANALYTICS_ID}
+  log_analytics_workspace_key: ${LOG_ANALYTICS_KEY}
+
+services:
+  - name: frontend
+    dockerfile: frontend/Dockerfile
+    port: 3000
+    external: true
+    cpu: 0.5
+    memory: 1Gi
+    min_replicas: 2
+    max_replicas: 10
+    context: ./frontend
+    
+  - name: api
+    dockerfile: api/Dockerfile
+    port: 8080
+    external: true
+    cpu: 1
+    memory: 2Gi
+    min_replicas: 3
+    max_replicas: 20
+    context: ./api
+    
+  - name: worker
+    dockerfile: worker/Dockerfile
+    port: 9000
+    external: false
+    cpu: 0.5
+    memory: 1Gi
+    min_replicas: 1
+    max_replicas: 5
+    context: ./worker

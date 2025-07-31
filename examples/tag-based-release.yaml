@@ -1,0 +1,32 @@
+# Tag-based release application
+# Uses trunk-release strategy:
+# - PRs create dynamic environments
+# - Merges to main don't trigger deployments
+# - Only tags (v*) deploy to production
+
+name: backend-api
+strategy: trunk-release
+
+azure:
+  resource_group: rg-backend
+  registry: backendregistry
+  location: eastus2
+
+services:
+  - name: api
+    dockerfile: Dockerfile.api
+    port: 8080
+    external: true
+    cpu: 0.5
+    memory: 1Gi
+    min_replicas: 2
+    max_replicas: 10
+    
+  - name: auth
+    dockerfile: Dockerfile.auth
+    port: 8081
+    external: true
+    cpu: 0.25
+    memory: 0.5Gi
+    min_replicas: 2
+    max_replicas: 5

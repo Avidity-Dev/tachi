@@ -1,0 +1,53 @@
+# High-traffic application with auto-scaling
+# Demonstrates resource allocation and scaling configuration
+
+name: ecommerce-platform
+strategy: trunk-release-stage
+
+azure:
+  resource_group: rg-ecommerce-prod
+  registry: ecommerceregistry
+  location: eastus
+  log_analytics_workspace_id: ${LOG_ANALYTICS_ID}
+  log_analytics_workspace_key: ${LOG_ANALYTICS_KEY}
+
+services:
+  - name: storefront
+    dockerfile: apps/storefront/Dockerfile
+    port: 3000
+    external: true
+    cpu: 1
+    memory: 2Gi
+    min_replicas: 5      # Always keep 5 instances minimum
+    max_replicas: 50     # Scale up to 50 during peak traffic
+    context: ./apps/storefront
+    
+  - name: catalog-api
+    dockerfile: services/catalog/Dockerfile
+    port: 8080
+    external: true
+    cpu: 0.75
+    memory: 1.5Gi
+    min_replicas: 3
+    max_replicas: 30
+    context: ./services/catalog
+    
+  - name: order-processor
+    dockerfile: services/orders/Dockerfile
+    port: 8081
+    external: false      # Internal service
+    cpu: 1
+    memory: 2Gi
+    min_replicas: 2
+    max_replicas: 20
+    context: ./services/orders
+    
+  - name: cache-warmer
+    dockerfile: workers/cache/Dockerfile
+    port: 9000
+    external: false
+    cpu: 0.5
+    memory: 1Gi
+    min_replicas: 1
+    max_replicas: 5
+    context: ./workers/cache

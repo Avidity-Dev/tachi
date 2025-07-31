@@ -1,0 +1,19 @@
+# Simple web application with trunk-direct deployment
+# Deploys directly to production on merge to main branch
+
+name: simple-web-app
+strategy: trunk-direct
+
+azure:
+  resource_group: rg-webapp
+  registry: webappregistry
+  location: eastus
+
+services:
+  - name: web
+    port: 80
+    external: true
+    cpu: 0.25
+    memory: 0.5Gi
+    min_replicas: 1
+    max_replicas: 5

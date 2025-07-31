@@ -1,0 +1,24 @@
+# Internal tools with minimal configuration
+# Good for low-risk internal applications
+
+name: internal-dashboard
+strategy: trunk-direct
+
+azure:
+  resource_group: rg-internal-tools
+  registry: internalregistry
+  # Uses default location: eastus
+
+services:
+  - name: dashboard
+    # Uses default Dockerfile name: Dockerfile
+    # Uses default port: 8000
+    external: true
+    cpu: 0.25
+    memory: 0.5Gi
+    
+  - name: metrics-collector
+    port: 9090
+    external: false  # Internal service only
+    cpu: 0.25
+    memory: 0.5Gi

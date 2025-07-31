@@ -1,0 +1,49 @@
+.constructionBanner {
+  background-color: #fff3cd;
+  border-bottom: 2px solid #ffeaa7;
+  padding: 1rem 0;
+  margin-bottom: 2rem;
+}
+
+[data-theme='dark'] .constructionBanner {
+  background-color: #664d03;
+  border-bottom-color: #997404;
+}
+
+.constructionText {
+  margin: 0;
+  text-align: center;
+  font-size: 1.1rem;
+  color: #856404;
+}
+
+[data-theme='dark'] .constructionText {
+  color: #ffecb5;
+}
+
+.constructionSubtext {
+  margin: 0.5rem 0 0 0;
+  text-align: center;
+  color: #856404;
+}
+
+[data-theme='dark'] .constructionSubtext {
+  color: #d3b56a;
+}
+
+.constructionLink {
+  color: #0c5460;
+  text-decoration: underline;
+}
+
+[data-theme='dark'] .constructionLink {
+  color: #56bcc7;
+}
+
+.constructionLink:hover {
+  color: #062c33;
+}
+
+[data-theme='dark'] .constructionLink:hover {
+  color: #9fe2ea;
+}

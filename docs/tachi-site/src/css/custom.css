@@ -1,0 +1,72 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  /* Azure-inspired blue palette */
+  --ifm-color-primary: #0078d4;
+  --ifm-color-primary-dark: #006bb3;
+  --ifm-color-primary-darker: #0062a3;
+  --ifm-color-primary-darkest: #005191;
+  --ifm-color-primary-light: #1a85db;
+  --ifm-color-primary-lighter: #2b8fe0;
+  --ifm-color-primary-lightest: #4da1e8;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  
+  /* Additional custom properties */
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ifm-heading-font-family: var(--ifm-font-family-base);
+  --ifm-font-family-monospace: "SF Mono", Monaco, Consolas, "Courier New", monospace;
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #40a9ff;
+  --ifm-color-primary-dark: #1a94ff;
+  --ifm-color-primary-darker: #0084ff;
+  --ifm-color-primary-darkest: #006dd9;
+  --ifm-color-primary-light: #66bbff;
+  --ifm-color-primary-lighter: #7ac4ff;
+  --ifm-color-primary-lightest: #a3d5ff;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Custom styles for tachi */
+.hero--primary {
+  background: linear-gradient(135deg, #0078d4 0%, #005a9e 100%);
+}
+
+/* Code blocks styling */
+pre code {
+  border-radius: 4px;
+}
+
+/* Improve table styling */
+table {
+  display: table;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+table thead {
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+/* Feature boxes on homepage */
+.feature {
+  padding: 2rem;
+}
+
+/* Navbar adjustments */
+.navbar__title {
+  font-weight: 600;
+}
+
+/* Sidebar active item */
+.menu__link--active {
+  font-weight: 600;
+}
