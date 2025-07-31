@@ -102,11 +102,7 @@ tachi is a simple Python CLI tool that generates GitHub Actions workflows for Az
    - _generate_container_configs(): Generate container app configs (stub)
    - _generate_setup_instructions(): Create SETUP.md with required secrets
 
-**Acceptance Criteria**:
-- [ ] Generator creates expected directory structure
-- [ ] Strategy logic correctly determines workflows
-- [ ] SETUP.md generated with correct secret list
-- [ ] Code under 150 lines
+d
 
 ### Week 2: Templates & Polish (Days 6-10)
 
