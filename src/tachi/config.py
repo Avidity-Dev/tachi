@@ -61,7 +61,7 @@ class ProjectConfig:
         errors = []
         
         # Validate strategy
-        valid_strategies = ["basic", "blue-green", "canary"]
+        valid_strategies = ["trunk-direct", "trunk-release", "trunk-release-stage"]
         if self.strategy not in valid_strategies:
             errors.append(f"Invalid strategy: {self.strategy}. Must be one of {valid_strategies}")
         

@@ -47,14 +47,17 @@ class AzureGenerator:
     
     def _get_workflows_for_strategy(self, strategy: str) -> List[str]:
         """Return workflow list based on deployment strategy"""
-        if strategy == "basic":
-            return ["dev-deploy", "stage-deploy", "prod-deploy"]
-        elif strategy == "blue-green":
-            return ["dev-deploy", "stage-deploy", "prod-deploy", "pr-cleanup"]
-        elif strategy == "canary":
-            return ["dev-deploy", "stage-deploy", "prod-deploy", "pr-cleanup"]
+        if strategy == "trunk-direct":
+            # PR environments + merge to main deploys to production
+            return ["pr-deploy", "prod-deploy", "pr-cleanup"]
+        elif strategy == "trunk-release":
+            # PR environments + tag releases to production (no staging)
+            return ["pr-deploy", "prod-deploy", "pr-cleanup"]
+        elif strategy == "trunk-release-stage":
+            # PR environments + merge to main deploys to staging + tag to production
+            return ["pr-deploy", "stage-deploy", "prod-deploy", "pr-cleanup"]
         else:
-            return ["dev-deploy", "stage-deploy", "prod-deploy"]
+            return ["pr-deploy", "prod-deploy", "pr-cleanup"]
     
     def _generate_workflow(self, config: ProjectConfig, workflow_name: str, output_dir: Path) -> None:
         """Generate a single workflow file from template"""

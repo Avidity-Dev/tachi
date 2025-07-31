@@ -78,10 +78,16 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
                 bar.update(3)
                 click.echo("\nWould generate:")
                 click.echo("  📁 .github/workflows/")
-                for workflow in ["dev-deploy.yaml", "stage-deploy.yaml", "prod-deploy.yaml"]:
+                workflows = []
+                if project_config.strategy == "trunk-direct":
+                    workflows = ["pr-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+                elif project_config.strategy == "trunk-release":
+                    workflows = ["pr-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+                elif project_config.strategy == "trunk-release-stage":
+                    workflows = ["pr-deploy.yaml", "stage-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+                
+                for workflow in workflows:
                     click.echo(f"     • {workflow}")
-                if project_config.strategy in ["blue-green", "canary"]:
-                    click.echo(f"     • pr-cleanup.yaml")
                 click.echo("  📁 container-apps/configs/")
                 for service in project_config.services:
                     click.echo(f"     • {service.name}.yaml")
@@ -130,8 +136,9 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
         # Deployment strategy
         strategy = click.prompt(
             "Deployment strategy",
-            type=click.Choice(["basic", "blue-green", "canary"]),
-            default="basic"
+            type=click.Choice(["trunk-direct", "trunk-release", "trunk-release-stage"]),
+            default="trunk-release",
+            show_choices=True
         )
         
         # Azure configuration
@@ -309,16 +316,23 @@ def validate(config: str, verbose: bool):
     
     # Strategy-specific information
     click.echo(f"\n📦 {click.style('Deployment Strategy', bold=True)}")
-    if project_config.strategy == "basic":
-        click.echo("   Basic deployment - Direct updates to environments")
-    elif project_config.strategy == "blue-green":
-        click.echo("   Blue-Green deployment - Zero-downtime with slot swapping")
-        click.echo("   • Includes PR cleanup workflow")
-        click.echo("   • Staging validation before production")
-    elif project_config.strategy == "canary":
-        click.echo("   Canary deployment - Gradual rollout with traffic splitting")
-        click.echo("   • Includes PR cleanup workflow")
-        click.echo("   • Progressive traffic increase")
+    if project_config.strategy == "trunk-direct":
+        click.echo("   Trunk Direct - Merge to main deploys directly to production")
+        click.echo("   • Dynamic PR environments for testing")
+        click.echo("   • Direct to production on merge")
+        click.echo("   • Best for low-risk or internal applications")
+    elif project_config.strategy == "trunk-release":
+        click.echo("   Trunk Release - Tag releases deploy to production")
+        click.echo("   • Dynamic PR environments for testing")
+        click.echo("   • No automatic deployment on merge to main")
+        click.echo("   • Production deployments via git tags (v*)")
+        click.echo("   • Good for controlled releases without staging")
+    elif project_config.strategy == "trunk-release-stage":
+        click.echo("   Trunk Release + Staging - Full deployment pipeline")
+        click.echo("   • Dynamic PR environments for testing")
+        click.echo("   • Automatic staging deployment on merge to main")
+        click.echo("   • Production deployments via git tags (v*)")
+        click.echo("   • Best for applications requiring staging validation")
     
     # Verbose mode - show raw config
     if verbose:
@@ -328,9 +342,14 @@ def validate(config: str, verbose: bool):
     # Files that will be generated
     click.echo(f"\n📁 {click.style('Files to be generated', bold=True)}")
     click.echo("   Workflows:")
-    workflows = ["dev-deploy.yaml", "stage-deploy.yaml", "prod-deploy.yaml"]
-    if project_config.strategy in ["blue-green", "canary"]:
-        workflows.append("pr-cleanup.yaml")
+    workflows = []
+    if project_config.strategy == "trunk-direct":
+        workflows = ["pr-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+    elif project_config.strategy == "trunk-release":
+        workflows = ["pr-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+    elif project_config.strategy == "trunk-release-stage":
+        workflows = ["pr-deploy.yaml", "stage-deploy.yaml", "prod-deploy.yaml", "pr-cleanup.yaml"]
+    
     for wf in workflows:
         click.echo(f"     • .github/workflows/{wf}")
     

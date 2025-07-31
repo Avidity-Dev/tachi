@@ -3,8 +3,7 @@ name: Deploy to Staging
 on:
   push:
     branches:
-      - release/*
-      - staging
+      - main
   workflow_dispatch:
 
 permissions:
@@ -73,20 +72,6 @@ jobs:
 [% endif %]
 
 [% endfor %]
-[% if project.strategy == "blue-green" %]
-      # Blue-Green deployment specific steps
-      - name: Validate staging deployment
-        run: |
-          echo "Running smoke tests on staging environment..."
-          # Add your validation scripts here
-          
-      - name: Tag as stable if validation passes
-        if: success()
-        run: |
-          docker tag ${{ env.REGISTRY }}/[[ project.name ]]:${{ github.sha }} \
-                     ${{ env.REGISTRY }}/[[ project.name ]]:stage-stable
-          docker push ${{ env.REGISTRY }}/[[ project.name ]]:stage-stable
-[% endif %]
 
       - name: Post deployment summary
         if: always()

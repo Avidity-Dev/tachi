@@ -1,6 +1,11 @@
 name: Deploy to Production
 
 on:
+[% if project.strategy == "trunk-direct" %]
+  push:
+    branches:
+      - main
+[% elif project.strategy in ["trunk-release", "trunk-release-stage"] %]
   push:
     tags:
       - 'v*'
@@ -10,6 +15,7 @@ on:
         description: 'Tag to deploy (e.g., v1.0.0)'
         required: true
         type: string
+[% endif %]
 
 permissions:
   id-token: write
@@ -46,11 +52,15 @@ jobs:
       - name: Set deployment tag
         id: deployment
         run: |
+[% if project.strategy == "trunk-direct" %]
+          echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+[% else %]
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           else
             echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
+[% endif %]
 
 [% for service in services %]
       # Build and deploy [[ service.name ]]
@@ -63,19 +73,6 @@ jobs:
           docker push ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }}
           docker push ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:latest
 
-[% if project.strategy == "blue-green" %]
-      - name: Deploy [[ service.name ]] to Blue slot
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          containerAppName: [[ project.name ]]-[[ service.name ]]-prod-blue
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          imageToDeploy: ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }}
-          location: [[ azure.location ]]
-          environmentVariables: |
-            ENVIRONMENT=prod
-            SERVICE_NAME=[[ service.name ]]
-            DEPLOYMENT_SLOT=blue
-[% else %]
       - name: Deploy [[ service.name ]] to Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
@@ -86,7 +83,6 @@ jobs:
           environmentVariables: |
             ENVIRONMENT=prod
             SERVICE_NAME=[[ service.name ]]
-[% endif %]
 [% if service.external %]
           ingress: external
           targetPort: [[ service.port ]]
@@ -104,34 +100,6 @@ jobs:
 [% endif %]
 
 [% endfor %]
-[% if project.strategy == "blue-green" %]
-      - name: Run production smoke tests
-        run: |
-          echo "Running smoke tests on blue environment..."
-          # Add your production validation scripts here
-          
-      - name: Switch traffic to blue
-        if: success()
-        run: |
-          echo "Switching production traffic from green to blue..."
-          # Add traffic switching logic here
-[% elif project.strategy == "canary" %]
-      - name: Deploy canary (10% traffic)
-        run: |
-          echo "Deploying canary with 10% traffic split..."
-          # Add canary deployment logic here
-          
-      - name: Monitor canary metrics
-        run: |
-          echo "Monitoring canary deployment for 15 minutes..."
-          # Add monitoring logic here
-          
-      - name: Promote canary to full deployment
-        if: success()
-        run: |
-          echo "Promoting canary to 100% traffic..."
-          # Add promotion logic here
-[% endif %]
 
       - name: Create release notes
         if: success()
