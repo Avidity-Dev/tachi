@@ -1,8 +1,12 @@
 # tachi
 
+> **⚠️ WARNING: This project is under active development and is NOT release-ready.**
+> 
+> This software is currently in a pre-release state and should not be used in production environments. Features may be incomplete, unstable, or subject to breaking changes without notice. Official release is pending.
+
 A CLI tool for generating production-ready GitHub Actions workflows and Azure Container Apps configurations. Tachi automates the creation of CI/CD pipelines with support for multiple deployment strategies, dynamic PR environments, and multi-service applications.
 
-Developed for internal use at Avidity Biosciences.
+Developed for internal use at Avidity Biosciences to deploy resources to cloud environments. __Currently only supports Azure Container Apps.__
 
 ## Features
 
