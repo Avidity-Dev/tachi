@@ -1,6 +1,7 @@
 ---
 slug: /
 sidebar_position: 1
+sidebar_label: Introduction
 ---
 
 import styles from '@site/src/css/ConstructionBanner.module.css';
