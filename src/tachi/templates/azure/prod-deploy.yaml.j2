@@ -1,0 +1,154 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ENVIRONMENT: prod
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  REGISTRY: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Set deployment tag
+        id: deployment
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+[% for service in services %]
+      # Build and deploy [[ service.name ]]
+      - name: Build [[ service.name ]] image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }} \
+            -t ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:latest \
+            -f [[ service.dockerfile ]] \
+            [[ service.context ]]
+          docker push ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }}
+          docker push ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:latest
+
+[% if project.strategy == "blue-green" %]
+      - name: Deploy [[ service.name ]] to Blue slot
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: [[ project.name ]]-[[ service.name ]]-prod-blue
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }}
+          location: [[ azure.location ]]
+          environmentVariables: |
+            ENVIRONMENT=prod
+            SERVICE_NAME=[[ service.name ]]
+            DEPLOYMENT_SLOT=blue
+[% else %]
+      - name: Deploy [[ service.name ]] to Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: [[ project.name ]]-[[ service.name ]]-prod
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ steps.deployment.outputs.tag }}
+          location: [[ azure.location ]]
+          environmentVariables: |
+            ENVIRONMENT=prod
+            SERVICE_NAME=[[ service.name ]]
+[% endif %]
+[% if service.external %]
+          ingress: external
+          targetPort: [[ service.port ]]
+[% else %]
+          ingress: internal
+          targetPort: [[ service.port ]]
+[% endif %]
+          cpuCore: '[[ service.cpu ]]'
+          memory: '[[ service.memory ]]'
+          minReplicas: [[ service.min_replicas ]]
+          maxReplicas: [[ service.max_replicas ]]
+[% if azure.log_analytics_workspace_id %]
+          logAnalyticsWorkspaceId: ${{ secrets.LOG_ANALYTICS_WORKSPACE_ID }}
+          logAnalyticsWorkspaceKey: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+[% endif %]
+
+[% endfor %]
+[% if project.strategy == "blue-green" %]
+      - name: Run production smoke tests
+        run: |
+          echo "Running smoke tests on blue environment..."
+          # Add your production validation scripts here
+          
+      - name: Switch traffic to blue
+        if: success()
+        run: |
+          echo "Switching production traffic from green to blue..."
+          # Add traffic switching logic here
+[% elif project.strategy == "canary" %]
+      - name: Deploy canary (10% traffic)
+        run: |
+          echo "Deploying canary with 10% traffic split..."
+          # Add canary deployment logic here
+          
+      - name: Monitor canary metrics
+        run: |
+          echo "Monitoring canary deployment for 15 minutes..."
+          # Add monitoring logic here
+          
+      - name: Promote canary to full deployment
+        if: success()
+        run: |
+          echo "Promoting canary to 100% traffic..."
+          # Add promotion logic here
+[% endif %]
+
+      - name: Create release notes
+        if: success()
+        run: |
+          echo "### Production Deployment Complete 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.deployment.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Strategy:** [[ project.strategy ]]" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Services deployed:**" >> $GITHUB_STEP_SUMMARY
+[% for service in services %]
+          echo "- [[ service.name ]]" >> $GITHUB_STEP_SUMMARY
+[% endfor %]
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor application metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- Check application logs" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify service health endpoints" >> $GITHUB_STEP_SUMMARY

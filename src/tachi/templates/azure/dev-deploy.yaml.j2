@@ -1,0 +1,88 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ENVIRONMENT: dev
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  REGISTRY: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: development
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+[% for service in services %]
+      # Build and deploy [[ service.name ]]
+      - name: Build [[ service.name ]] image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ github.sha }} \
+            -f [[ service.dockerfile ]] \
+            [[ service.context ]]
+          docker push ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ github.sha }}
+
+      - name: Deploy [[ service.name ]] to Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: [[ project.name ]]-[[ service.name ]]-dev
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/[[ project.name ]]-[[ service.name ]]:${{ github.sha }}
+          location: [[ azure.location ]]
+          environmentVariables: |
+            ENVIRONMENT=dev
+            SERVICE_NAME=[[ service.name ]]
+[% if service.external %]
+          ingress: external
+          targetPort: [[ service.port ]]
+[% else %]
+          ingress: internal
+          targetPort: [[ service.port ]]
+[% endif %]
+          cpuCore: '[[ service.cpu ]]'
+          memory: '[[ service.memory ]]'
+          minReplicas: [[ service.min_replicas ]]
+          maxReplicas: [[ service.max_replicas ]]
+[% if azure.log_analytics_workspace_id %]
+          logAnalyticsWorkspaceId: ${{ secrets.LOG_ANALYTICS_WORKSPACE_ID }}
+          logAnalyticsWorkspaceKey: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+[% endif %]
+
+[% endfor %]
+      - name: Post deployment summary
+        if: always()
+        run: |
+          echo "### Deployment Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Development" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Services deployed:**" >> $GITHUB_STEP_SUMMARY
+[% for service in services %]
+          echo "- [[ service.name ]]" >> $GITHUB_STEP_SUMMARY
+[% endfor %]

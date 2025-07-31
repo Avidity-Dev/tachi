@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: ContainerApp
+metadata:
+  name: [[ project.name ]]-[[ service.name ]]
+  namespace: [[ project.name ]]
+spec:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: [[ service.external | lower ]]
+      targetPort: [[ service.port ]]
+      transport: Http
+      traffic:
+        - weight: 100
+          latestRevision: true
+[% if service.external %]
+      customDomains: []
+      corsPolicy:
+        allowedOrigins:
+          - "*"
+        allowedMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "OPTIONS"
+        allowedHeaders:
+          - "*"
+[% endif %]
+    dapr:
+      enabled: false
+    secrets: []
+    registries:
+      - server: [[ azure.registry ]].azurecr.io
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        passwordSecretRef: registry-password
+  template:
+    containers:
+      - name: [[ service.name ]]
+        image: [[ azure.registry ]].azurecr.io/[[ project.name ]]-[[ service.name ]]:latest
+        resources:
+          cpu: [[ service.cpu ]]
+          memory: [[ service.memory ]]
+        env:
+          - name: ENVIRONMENT
+            value: "[[ environment ]]"
+          - name: SERVICE_NAME
+            value: "[[ service.name ]]"
+          - name: AZURE_RESOURCE_GROUP
+            value: "[[ azure.resource_group ]]"
+          - name: AZURE_LOCATION
+            value: "[[ azure.location ]]"
+[% if service.external %]
+        probes:
+          - type: Readiness
+            httpGet:
+              path: /health
+              port: [[ service.port ]]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          - type: Liveness
+            httpGet:
+              path: /health
+              port: [[ service.port ]]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+[% endif %]
+    scale:
+      minReplicas: [[ service.min_replicas ]]
+      maxReplicas: [[ service.max_replicas ]]
+      rules:
+        - name: http-scaling
+          http:
+            metadata:
+              concurrentRequests: "100"
+[% if service.cpu >= 0.5 %]
+        - name: cpu-scaling
+          custom:
+            type: cpu
+            metadata:
+              type: Utilization
+              value: "70"
+[% endif %]
+  managedEnvironmentId: /subscriptions/${{ secrets.AZURE_SUBSCRIPTION_ID }}/resourceGroups/[[ azure.resource_group ]]/providers/Microsoft.App/managedEnvironments/[[ project.name ]]-env
+[% if azure.log_analytics_workspace_id %]
+  workspaceId: [[ azure.log_analytics_workspace_id ]]
+[% endif %]

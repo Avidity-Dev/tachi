@@ -2,6 +2,8 @@
 
 A simple CLI tool for generating GitHub Actions workflows for Azure Container Apps deployments.
 
+Developed for internal use at Avidity Biosciences.
+
 ## Usage
 
 Run directly without installation using uvx:

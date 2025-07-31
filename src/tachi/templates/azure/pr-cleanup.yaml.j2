@@ -1,0 +1,66 @@
+name: PR Environment Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.event.pull_request.state == 'closed'
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get PR environment name
+        id: pr-env
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          echo "pr_env=pr-${PR_NUM}" >> $GITHUB_OUTPUT
+
+[% for service in services %]
+      - name: Delete [[ service.name ]] PR environment
+        continue-on-error: true
+        run: |
+          az containerapp delete \
+            --name [[ project.name ]]-[[ service.name ]]-${{ steps.pr-env.outputs.pr_env }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --yes || echo "Container app not found, skipping..."
+
+[% endfor %]
+      - name: Clean up PR-specific resources
+        continue-on-error: true
+        run: |
+          # Clean up any PR-specific resources
+          PR_ENV=${{ steps.pr-env.outputs.pr_env }}
+          
+          # Delete PR-specific secrets or configurations if any
+          echo "Cleaning up resources for PR environment: ${PR_ENV}"
+          
+          # Add any additional cleanup commands here
+
+      - name: Post cleanup summary
+        if: always()
+        run: |
+          echo "### PR Environment Cleanup 🧹" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR #${{ github.event.pull_request.number }}:** ${{ github.event.pull_request.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ github.event.pull_request.state }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Merged:** ${{ github.event.pull_request.merged }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleaned up services:**" >> $GITHUB_STEP_SUMMARY
+[% for service in services %]
+          echo "- [[ project.name ]]-[[ service.name ]]-${{ steps.pr-env.outputs.pr_env }}" >> $GITHUB_STEP_SUMMARY
+[% endfor %]
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ PR environment resources have been cleaned up" >> $GITHUB_STEP_SUMMARY
