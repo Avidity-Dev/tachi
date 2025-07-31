@@ -1,26 +1,31 @@
 # tachi
 
+_"legitimate salvage..."_ 🚀
+
 > **⚠️ WARNING: This project is under active development and is NOT release-ready.**
-> 
+>
 > This software is currently in a pre-release state and should not be used in production environments. Features may be incomplete, unstable, or subject to breaking changes without notice. Official release is pending.
 
 A CLI tool for generating production-ready GitHub Actions workflows and Azure Container Apps configurations. Tachi automates the creation of CI/CD pipelines with support for multiple deployment strategies, dynamic PR environments, and multi-service applications.
 
-Developed for internal use at Avidity Biosciences to deploy resources to cloud environments. __Currently only supports Azure Container Apps.__
+Developed for internal use at Avidity Biosciences to deploy resources to cloud environments. **Currently only supports Azure Container Apps.**
 
 ## Features
 
 - 🚀 **Multiple Deployment Strategies**
+
   - `trunk-direct`: Simple deployment directly to production on merge
   - `trunk-release`: Tag-based releases without staging
   - `trunk-release-stage`: Full pipeline with staging environment
 
 - 🔄 **Dynamic PR Environments**
+
   - Automatic environment creation for each pull request
   - Environment URLs posted as PR comments
   - Automatic cleanup when PRs are closed
 
 - 📦 **Multi-Service Support**
+
   - Configure multiple services in a single project
   - Independent scaling and resource allocation
   - Internal and external service types
@@ -106,54 +111,57 @@ uvx tachi generate --config tachi.yaml --output ./generated
 
 ### Project Configuration
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Project name (used in resource naming) |
-| `strategy` | string | Yes | Deployment strategy (see below) |
-| `azure` | object | Yes | Azure configuration |
-| `services` | array | Yes | List of services to deploy |
+| Field      | Type   | Required | Description                            |
+| ---------- | ------ | -------- | -------------------------------------- |
+| `name`     | string | Yes      | Project name (used in resource naming) |
+| `strategy` | string | Yes      | Deployment strategy (see below)        |
+| `azure`    | object | Yes      | Azure configuration                    |
+| `services` | array  | Yes      | List of services to deploy             |
 
 ### Azure Configuration
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `resource_group` | string | Yes | - | Azure resource group name |
-| `registry` | string | Yes | - | Azure Container Registry name |
-| `location` | string | No | eastus | Azure region |
-| `log_analytics_workspace_id` | string | No | - | Log Analytics workspace ID |
-| `log_analytics_workspace_key` | string | No | - | Log Analytics workspace key |
+| Field                         | Type   | Required | Default | Description                   |
+| ----------------------------- | ------ | -------- | ------- | ----------------------------- |
+| `resource_group`              | string | Yes      | -       | Azure resource group name     |
+| `registry`                    | string | Yes      | -       | Azure Container Registry name |
+| `location`                    | string | No       | eastus  | Azure region                  |
+| `log_analytics_workspace_id`  | string | No       | -       | Log Analytics workspace ID    |
+| `log_analytics_workspace_key` | string | No       | -       | Log Analytics workspace key   |
 
 ### Service Configuration
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | Yes | - | Service name |
-| `dockerfile` | string | No | Dockerfile | Path to Dockerfile |
-| `port` | integer | No | 8000 | Container port |
-| `external` | boolean | No | true | External ingress enabled |
-| `cpu` | float | No | 0.25 | CPU cores (0.25 - 2) |
-| `memory` | string | No | 0.5Gi | Memory allocation |
-| `min_replicas` | integer | No | 1 | Minimum replicas |
-| `max_replicas` | integer | No | 10 | Maximum replicas |
-| `context` | string | No | . | Docker build context |
+| Field          | Type    | Required | Default    | Description              |
+| -------------- | ------- | -------- | ---------- | ------------------------ |
+| `name`         | string  | Yes      | -          | Service name             |
+| `dockerfile`   | string  | No       | Dockerfile | Path to Dockerfile       |
+| `port`         | integer | No       | 8000       | Container port           |
+| `external`     | boolean | No       | true       | External ingress enabled |
+| `cpu`          | float   | No       | 0.25       | CPU cores (0.25 - 2)     |
+| `memory`       | string  | No       | 0.5Gi      | Memory allocation        |
+| `min_replicas` | integer | No       | 1          | Minimum replicas         |
+| `max_replicas` | integer | No       | 10         | Maximum replicas         |
+| `context`      | string  | No       | .          | Docker build context     |
 
 ## Deployment Strategies
 
 ### trunk-direct
+
 - **PR**: Creates dynamic environment
 - **Merge to main**: Deploys to production
 - **Use case**: Low-risk applications, internal tools
 
 ### trunk-release
+
 - **PR**: Creates dynamic environment
 - **Merge to main**: No automatic deployment
-- **Tag (v*)**: Deploys to production
+- **Tag (v\*)**: Deploys to production
 - **Use case**: Applications requiring controlled releases
 
 ### trunk-release-stage
+
 - **PR**: Creates dynamic environment
 - **Merge to main**: Deploys to staging
-- **Tag (v*)**: Deploys to production
+- **Tag (v\*)**: Deploys to production
 - **Use case**: Applications requiring staging validation
 
 ## Commands
@@ -197,19 +205,23 @@ uvx tachi generate
 After generating workflows, configure these secrets in your GitHub repository:
 
 ### Azure Authentication
+
 - `AZURE_CREDENTIALS`: Service principal credentials
 - `AZURE_SUBSCRIPTION_ID`: Azure subscription ID
 
 ### Container Registry
+
 - `REGISTRY_LOGIN_SERVER`: ACR login server URL
 - `REGISTRY_USERNAME`: Service principal client ID
 - `REGISTRY_PASSWORD`: Service principal client secret
 
 ### Azure Resources
+
 - `AZURE_RESOURCE_GROUP`: Resource group name
 - `AZURE_LOCATION`: Azure region
 
 ### Log Analytics (Optional)
+
 - `LOG_ANALYTICS_WORKSPACE_ID`: Workspace ID
 - `LOG_ANALYTICS_WORKSPACE_KEY`: Workspace key
 
