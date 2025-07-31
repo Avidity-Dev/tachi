@@ -1,4 +1,9 @@
-"""Tests for CLI commands"""
+"""
+Tests for CLI commands.
+
+This module tests all CLI commands including generate and validate, covering
+both interactive and non-interactive modes, error handling, and output formatting.
+"""
 import pytest
 from click.testing import CliRunner
 from pathlib import Path
@@ -9,16 +14,21 @@ from tachi.cli import cli
 
 
 class TestCLI:
-    """Test CLI commands"""
+    """
+    Test CLI commands.
+    
+    Tests the main CLI functionality including help, version, and both
+    generate and validate commands with various options.
+    """
     
     @pytest.fixture
     def runner(self):
-        """Create a CLI runner"""
+        """Create a CLI runner."""
         return CliRunner()
     
     @pytest.fixture
     def valid_config(self):
-        """Create a valid configuration dictionary"""
+        """Create a valid configuration dictionary."""
         return {
             "name": "test-app",
             "strategy": "trunk-direct",
@@ -38,7 +48,7 @@ class TestCLI:
     
     @pytest.fixture
     def invalid_config(self):
-        """Create an invalid configuration dictionary"""
+        """Create an invalid configuration dictionary."""
         return {
             "name": "test-app",
             "strategy": "invalid-strategy",
@@ -49,14 +59,14 @@ class TestCLI:
             "services": [
                 {
                     "name": "api",
-                    "port": 100000,  # Invalid port
-                    "cpu": -1  # Invalid CPU
+                    "port": 100000,
+                    "cpu": -1
                 }
             ]
         }
     
     def test_cli_help(self, runner):
-        """Test CLI help command"""
+        """Test CLI help command."""
         result = runner.invoke(cli, ['--help'])
         assert result.exit_code == 0
         assert "tachi - GitHub Actions CI/CD generator" in result.output
@@ -64,13 +74,13 @@ class TestCLI:
         assert "validate" in result.output
     
     def test_cli_version(self, runner):
-        """Test CLI version command"""
+        """Test CLI version command."""
         result = runner.invoke(cli, ['--version'])
         assert result.exit_code == 0
         assert "version" in result.output
     
     def test_generate_help(self, runner):
-        """Test generate command help"""
+        """Test generate command help."""
         result = runner.invoke(cli, ['generate', '--help'])
         assert result.exit_code == 0
         assert "Generate GitHub Actions workflows" in result.output
@@ -80,7 +90,7 @@ class TestCLI:
         assert "--force" in result.output
     
     def test_validate_help(self, runner):
-        """Test validate command help"""
+        """Test validate command help."""
         result = runner.invoke(cli, ['validate', '--help'])
         assert result.exit_code == 0
         assert "Validate a tachi configuration file" in result.output
@@ -88,9 +98,8 @@ class TestCLI:
         assert "--verbose" in result.output
     
     def test_validate_valid_config(self, runner, valid_config):
-        """Test validating a valid configuration"""
+        """Test validating a valid configuration."""
         with runner.isolated_filesystem():
-            # Create config file
             with open('config.yaml', 'w') as f:
                 yaml.dump(valid_config, f)
             
@@ -102,9 +111,8 @@ class TestCLI:
             assert "api" in result.output
     
     def test_validate_invalid_config(self, runner, invalid_config):
-        """Test validating an invalid configuration"""
+        """Test validating an invalid configuration."""
         with runner.isolated_filesystem():
-            # Create config file
             with open('config.yaml', 'w') as f:
                 yaml.dump(invalid_config, f)
             
@@ -115,7 +123,7 @@ class TestCLI:
             assert "cpu must be greater than" in result.output
     
     def test_validate_verbose(self, runner, valid_config):
-        """Test validate command with verbose flag"""
+        """Test validate command with verbose flag."""
         with runner.isolated_filesystem():
             with open('config.yaml', 'w') as f:
                 yaml.dump(valid_config, f)
@@ -123,17 +131,17 @@ class TestCLI:
             result = runner.invoke(cli, ['validate', '--config', 'config.yaml', '--verbose'])
             assert result.exit_code == 0
             assert "Raw Configuration" in result.output
-            assert "Dockerfile:" in result.output  # Verbose service info
+            assert "Dockerfile:" in result.output
             assert "Context:" in result.output
     
     def test_validate_missing_file(self, runner):
-        """Test validate with missing configuration file"""
+        """Test validate with missing configuration file."""
         result = runner.invoke(cli, ['validate', '--config', 'nonexistent.yaml'])
         assert result.exit_code == 2
         assert "does not exist" in result.output
     
     def test_validate_invalid_yaml(self, runner):
-        """Test validate with invalid YAML syntax"""
+        """Test validate with invalid YAML syntax."""
         with runner.isolated_filesystem():
             with open('config.yaml', 'w') as f:
                 f.write("invalid: yaml: syntax: here")
@@ -143,9 +151,8 @@ class TestCLI:
             assert "Invalid YAML syntax" in result.output
     
     def test_generate_with_config(self, runner, valid_config):
-        """Test generate command with configuration file"""
+        """Test generate command with configuration file."""
         with runner.isolated_filesystem():
-            # Create config file
             with open('config.yaml', 'w') as f:
                 yaml.dump(valid_config, f)
             
@@ -157,7 +164,7 @@ class TestCLI:
             assert Path('output/SETUP.md').exists()
     
     def test_generate_dry_run(self, runner, valid_config):
-        """Test generate command with dry-run flag"""
+        """Test generate command with dry-run flag."""
         with runner.isolated_filesystem():
             with open('config.yaml', 'w') as f:
                 yaml.dump(valid_config, f)
@@ -169,49 +176,44 @@ class TestCLI:
             assert "pr-deploy.yaml" in result.output
             assert "prod-deploy.yaml" in result.output
             assert "pr-cleanup.yaml" in result.output
-            # Should not create any files
             assert not Path('.github').exists()
     
     def test_generate_force_overwrite(self, runner, valid_config):
-        """Test generate command with force flag"""
+        """Test generate command with force flag."""
         with runner.isolated_filesystem():
             with open('config.yaml', 'w') as f:
                 yaml.dump(valid_config, f)
             
-            # Create output directory with existing files
             Path('output').mkdir()
             Path('output/existing.txt').touch()
             
-            # Without force, should prompt (we'll cancel)
             result = runner.invoke(cli, ['generate', '--config', 'config.yaml', '--output', 'output'], input='n\n')
             assert result.exit_code == 0
             assert "Output directory is not empty" in result.output
             assert "Aborted" in result.output
             
-            # With force, should not prompt
             result = runner.invoke(cli, ['generate', '--config', 'config.yaml', '--output', 'output', '--force'])
             assert result.exit_code == 0
             assert "Generation complete!" in result.output
             assert Path('output/.github/workflows').exists()
     
     def test_generate_without_config_interactive(self, runner):
-        """Test generate command interactive mode"""
-        # Simulate interactive input
+        """Test generate command interactive mode."""
         input_data = '\n'.join([
-            'test-project',  # Project name
-            'trunk-direct',  # Strategy (choose first option)
-            'rg-test',      # Resource group
-            'testregistry', # Registry
-            'eastus',       # Location
-            'api',          # Service name
-            '',             # Dockerfile (default)
-            '',             # Port (default)
-            'y',            # External access
-            '',             # CPU (default)
-            '',             # Memory (default)
-            'n',            # Add another service
-            'n',            # Save configuration
-            'n'             # Generate files
+            'test-project',
+            'trunk-direct',
+            'rg-test',
+            'testregistry',
+            'eastus',
+            'api',
+            '',
+            '',
+            'y',
+            '',
+            '',
+            'n',
+            'n',
+            'n'
         ])
         
         with runner.isolated_filesystem():
@@ -219,10 +221,10 @@ class TestCLI:
             assert result.exit_code == 0
             assert "Welcome to tachi interactive mode!" in result.output
             assert "Project name:" in result.output
-            assert "Deployment strategy" in result.output  # Remove colon since it's part of a longer line
+            assert "Deployment strategy" in result.output
     
     def test_generate_with_all_strategies(self, runner):
-        """Test generate command with each deployment strategy"""
+        """Test generate command with each deployment strategy."""
         strategies = ["trunk-direct", "trunk-release", "trunk-release-stage"]
         
         for strategy in strategies:
@@ -243,7 +245,6 @@ class TestCLI:
                 result = runner.invoke(cli, ['generate', '--config', 'config.yaml', '--output', 'output'])
                 assert result.exit_code == 0
                 
-                # Check appropriate workflows are generated
                 workflows_dir = Path('output/.github/workflows')
                 assert (workflows_dir / 'pr-deploy.yaml').exists()
                 assert (workflows_dir / 'prod-deploy.yaml').exists()
@@ -256,14 +257,18 @@ class TestCLI:
 
 
 class TestCLIProgressAndOutput:
-    """Test CLI progress indicators and output formatting"""
+    """
+    Test CLI progress indicators and output formatting.
+    
+    Tests the visual feedback and output formatting of CLI commands.
+    """
     
     @pytest.fixture
     def runner(self):
         return CliRunner()
     
     def test_generate_progress_bar(self, runner):
-        """Test that generate shows progress bar"""
+        """Test that generate shows progress bar."""
         config = {
             "name": "test-app",
             "strategy": "trunk-direct",
@@ -277,12 +282,11 @@ class TestCLIProgressAndOutput:
             
             result = runner.invoke(cli, ['generate', '--config', 'config.yaml', '--output', 'output'])
             assert result.exit_code == 0
-            # Progress bar creates output with "Generating files"
             assert "Generating files" in result.output
             assert "Loading configuration" in result.output
     
     def test_validate_colored_output(self, runner):
-        """Test that validate command uses colored output"""
+        """Test that validate command uses colored output."""
         config = {
             "name": "test-app",
             "strategy": "trunk-release-stage",
@@ -296,7 +300,6 @@ class TestCLIProgressAndOutput:
             
             result = runner.invoke(cli, ['validate', '--config', 'config.yaml'])
             assert result.exit_code == 0
-            # Check for basic content in output
             assert "test-app" in result.output
             assert "trunk-release-stage" in result.output
             assert "web" in result.output

@@ -1,4 +1,10 @@
-"""CLI interface for tachi"""
+"""
+CLI interface for tachi.
+
+Provides the command-line interface for tachi, including commands for generating
+GitHub Actions workflows and validating configuration files. Supports both
+interactive and non-interactive modes.
+"""
 
 from pathlib import Path
 from typing import Optional
@@ -15,12 +21,17 @@ from tachi.azure_generator import AzureGenerator
 @click.version_option()
 @click.help_option("-h", "--help")
 def cli():
-    """tachi - GitHub Actions CI/CD generator
+    """
+    tachi - GitHub Actions CI/CD generator.
 
     Generate production-ready GitHub Actions from a simple YAML configuration file.
 
-    Example usage:
+    Examples
+    --------
+    Generate workflows from config:
         tachi generate --config myapp.yaml --output ./generated
+        
+    Validate configuration:
         tachi validate --config myapp.yaml
     """
     pass
@@ -46,21 +57,40 @@ def cli():
     "--force", "-f", is_flag=True, help="Overwrite existing files without prompting"
 )
 def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
-    """Generate GitHub Actions workflows and Azure Container Apps configurations.
+    """
+    Generate GitHub Actions workflows and Azure Container Apps configurations.
 
     This command generates:
     - GitHub Actions workflows for dev, staging, and production deployments
     - Azure Container Apps configuration files
     - Setup documentation with required secrets
 
-    Example:
+    Parameters
+    ----------
+    config : Optional[str]
+        Path to YAML configuration file. If not provided, enters interactive mode.
+    output : str
+        Directory where generated files will be written.
+    dry_run : bool
+        If True, shows what would be generated without creating files.
+    force : bool
+        If True, overwrites existing files without prompting.
+
+    Examples
+    --------
+    Generate from config file:
         tachi generate --config myapp.yaml --output ./generated
+        
+    Dry run to preview:
+        tachi generate --config myapp.yaml --dry-run
+        
+    Interactive mode:
+        tachi generate
     """
     output_dir = Path(output)
 
     if config:
         with click.progressbar(length=5, label="Generating files") as bar:
-            # Load configuration
             bar.update(1, "Loading configuration")
             click.echo(f"\n📄 Loading configuration from: {config}")
             try:
@@ -69,7 +99,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
                 click.echo(f"\n❌ Error loading configuration: {e}", err=True)
                 raise SystemExit(1)
 
-            # Validate configuration
             bar.update(1, "Validating")
             errors = project_config.validate()
             if errors:
@@ -78,7 +107,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
                     click.echo(f"   • {error}", err=True)
                 raise SystemExit(1)
 
-            # Display configuration summary
             click.echo(f"\n✅ Configuration valid!")
             click.echo(f"   📦 Project: {click.style(project_config.name, bold=True)}")
             click.echo(
@@ -126,7 +154,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
                 click.echo("  📄 SETUP.md")
                 return
 
-            # Check for existing files
             bar.update(1, "Checking output directory")
             if output_dir.exists() and any(output_dir.iterdir()) and not force:
                 if not click.confirm(
@@ -135,7 +162,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
                     click.echo("Aborted.")
                     raise SystemExit(0)
 
-            # Generate files
             bar.update(1, "Generating workflows")
             template_dir = Path(__file__).parent / "templates" / "azure"
             generator = AzureGenerator(template_dir)
@@ -148,7 +174,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
 
             bar.update(1, "Complete")
 
-        # Success message
         click.echo(f"\n✅ Generation complete!")
         click.echo(
             f"\n📁 Files created in: {click.style(str(output_dir.absolute()), fg='green', bold=True)}"
@@ -163,13 +188,9 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
         click.echo("   3. Push the generated files to trigger deployments")
 
     else:
-        # Interactive mode
         click.echo("🚀 Welcome to tachi interactive mode!\n")
 
-        # Project name
         project_name = click.prompt("Project name", type=str)
-
-        # Deployment strategy
         strategy = click.prompt(
             "Deployment strategy",
             type=click.Choice(["trunk-direct", "trunk-release", "trunk-release-stage"]),
@@ -177,13 +198,11 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
             show_choices=True,
         )
 
-        # Azure configuration
         click.echo("\n📍 Azure Configuration:")
         resource_group = click.prompt("  Resource group", type=str)
         registry = click.prompt("  Container registry name", type=str)
         location = click.prompt("  Location", default="eastus", type=str)
 
-        # Services
         services = []
         click.echo("\n🔧 Service Configuration:")
         while True:
@@ -209,7 +228,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
             )
             services.append(service)
 
-        # Create configuration
         azure_config = AzureConfig(
             resource_group=resource_group, registry=registry, location=location
         )
@@ -218,7 +236,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
             name=project_name, strategy=strategy, azure=azure_config, services=services
         )
 
-        # Save configuration
         config_file = f"{project_name}.yaml"
         if click.confirm(f"\n💾 Save configuration to {config_file}?"):
             config_dict = {
@@ -247,7 +264,6 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
 
             click.echo(f"✅ Configuration saved to {config_file}")
 
-        # Generate files
         if click.confirm("\n🚀 Generate files now?"):
             template_dir = Path(__file__).parent / "templates" / "azure"
             generator = AzureGenerator(template_dir)
@@ -275,7 +291,8 @@ def generate(config: Optional[str], output: str, dry_run: bool, force: bool):
     help="Show detailed configuration information",
 )
 def validate(config: str, verbose: bool):
-    """Validate a tachi configuration file.
+    """
+    Validate a tachi configuration file.
 
     This command checks:
     - YAML syntax validity
@@ -283,12 +300,23 @@ def validate(config: str, verbose: bool):
     - Service configuration constraints
     - Deployment strategy validity
 
-    Example:
+    Parameters
+    ----------
+    config : str
+        Path to the YAML configuration file to validate.
+    verbose : bool
+        If True, displays detailed configuration information.
+
+    Examples
+    --------
+    Basic validation:
+        tachi validate --config myapp.yaml
+        
+    Verbose validation:
         tachi validate --config myapp.yaml --verbose
     """
     click.echo(f"🔍 Validating configuration: {click.style(config, fg='cyan')}\n")
 
-    # Load configuration
     try:
         with open(config, "r") as f:
             raw_config = yaml.safe_load(f)
@@ -300,14 +328,12 @@ def validate(config: str, verbose: bool):
         click.echo(f"❌ Error reading file: {e}", err=True)
         raise SystemExit(1)
 
-    # Parse configuration
     try:
         project_config = load_config(config)
     except Exception as e:
         click.echo(f"❌ Error parsing configuration: {e}", err=True)
         raise SystemExit(1)
 
-    # Validate configuration
     errors = project_config.validate()
 
     if errors:
@@ -317,10 +343,7 @@ def validate(config: str, verbose: bool):
         click.echo(f"\n💡 Fix the above {len(errors)} issue(s) and try again.")
         raise SystemExit(1)
 
-    # Success - show summary
     click.echo("✅ Configuration is valid!\n")
-
-    # Basic information
     click.echo(f"📋 {click.style('Configuration Summary', bold=True)}")
     click.echo(f"   Project:     {click.style(project_config.name, fg='green')}")
     click.echo(f"   Strategy:    {click.style(project_config.strategy, fg='cyan')}")
@@ -328,7 +351,6 @@ def validate(config: str, verbose: bool):
         f"   Services:    {click.style(str(len(project_config.services)), fg='yellow')}"
     )
 
-    # Azure configuration
     click.echo(f"\n☁️  {click.style('Azure Configuration', bold=True)}")
     click.echo(f"   Resource Group:  {project_config.azure.resource_group}")
     click.echo(f"   Registry:        {project_config.azure.registry}")
@@ -338,7 +360,6 @@ def validate(config: str, verbose: bool):
     else:
         click.echo(f"   Log Analytics:   Not configured")
 
-    # Services summary
     click.echo(f"\n🔧 {click.style('Services', bold=True)}")
     for service in project_config.services:
         click.echo(f"\n   {click.style(service.name, fg='yellow', bold=True)}")
@@ -352,7 +373,6 @@ def validate(config: str, verbose: bool):
             click.echo(f"     Dockerfile: {service.dockerfile}")
             click.echo(f"     Context:    {service.context}")
 
-    # Strategy-specific information
     click.echo(f"\n📦 {click.style('Deployment Strategy', bold=True)}")
     if project_config.strategy == "trunk-direct":
         click.echo("   Trunk Direct - Merge to main deploys directly to production")
@@ -372,12 +392,10 @@ def validate(config: str, verbose: bool):
         click.echo("   • Production deployments via git tags (v*)")
         click.echo("   • Best for applications requiring staging validation")
 
-    # Verbose mode - show raw config
     if verbose:
         click.echo(f"\n📄 {click.style('Raw Configuration', bold=True)}")
         click.echo(yaml.dump(raw_config, default_flow_style=False, sort_keys=False))
 
-    # Files that will be generated
     click.echo(f"\n📁 {click.style('Files to be generated', bold=True)}")
     click.echo("   Workflows:")
     workflows = []

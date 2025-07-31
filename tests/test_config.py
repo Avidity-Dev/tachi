@@ -1,4 +1,9 @@
-"""Tests for configuration dataclasses and validation"""
+"""
+Tests for configuration dataclasses and validation.
+
+This module tests the configuration parsing, validation logic, and data structures
+used to represent tachi project configurations.
+"""
 import pytest
 from tachi.config import Service, AzureConfig, ProjectConfig, load_config, _parse_config
 import tempfile
@@ -7,10 +12,15 @@ from pathlib import Path
 
 
 class TestService:
-    """Test Service dataclass validation"""
+    """
+    Test Service dataclass validation.
+    
+    Tests all validation rules for service configurations including port ranges,
+    CPU allocations, and replica constraints.
+    """
     
     def test_valid_service(self):
-        """Test creating a valid service"""
+        """Test creating a valid service."""
         service = Service(
             name="api",
             dockerfile="Dockerfile",
@@ -23,7 +33,7 @@ class TestService:
         assert errors == []
     
     def test_invalid_port_range(self):
-        """Test service with invalid port"""
+        """Test service with invalid port."""
         service = Service(name="api", port=70000)
         errors = service.validate()
         assert len(errors) == 1
@@ -35,7 +45,7 @@ class TestService:
         assert "port must be between 1 and 65535" in errors[0]
     
     def test_invalid_cpu(self):
-        """Test service with invalid CPU"""
+        """Test service with invalid CPU."""
         service = Service(name="api", cpu=-1)
         errors = service.validate()
         assert len(errors) == 1
@@ -47,21 +57,19 @@ class TestService:
         assert "cpu must be greater than 0" in errors[0]
     
     def test_invalid_replicas(self):
-        """Test service with invalid replica configuration"""
-        # Negative min replicas
+        """Test service with invalid replica configuration."""
         service = Service(name="api", min_replicas=-1)
         errors = service.validate()
         assert len(errors) == 1
         assert "min_replicas cannot be negative" in errors[0]
         
-        # Max replicas less than min
         service = Service(name="api", min_replicas=5, max_replicas=3)
         errors = service.validate()
         assert len(errors) == 1
         assert "max_replicas must be >= min_replicas" in errors[0]
     
     def test_multiple_errors(self):
-        """Test service with multiple validation errors"""
+        """Test service with multiple validation errors."""
         service = Service(
             name="api",
             port=100000,
@@ -74,10 +82,15 @@ class TestService:
 
 
 class TestProjectConfig:
-    """Test ProjectConfig validation"""
+    """
+    Test ProjectConfig validation.
+    
+    Tests project-level validation including deployment strategies, service name
+    uniqueness, and propagation of service validation errors.
+    """
     
     def test_valid_project_config(self):
-        """Test creating a valid project configuration"""
+        """Test creating a valid project configuration."""
         azure = AzureConfig(
             resource_group="rg-test",
             registry="testregistry",
@@ -94,7 +107,7 @@ class TestProjectConfig:
         assert errors == []
     
     def test_invalid_strategy(self):
-        """Test project with invalid strategy"""
+        """Test project with invalid strategy."""
         azure = AzureConfig(resource_group="rg", registry="reg")
         config = ProjectConfig(
             name="test",
@@ -110,7 +123,7 @@ class TestProjectConfig:
         assert "trunk-release-stage" in errors[0]
     
     def test_duplicate_service_names(self):
-        """Test project with duplicate service names"""
+        """Test project with duplicate service names."""
         azure = AzureConfig(resource_group="rg", registry="reg")
         service1 = Service(name="api")
         service2 = Service(name="api")
@@ -124,7 +137,7 @@ class TestProjectConfig:
         assert any("Duplicate service names" in error for error in errors)
     
     def test_service_validation_propagation(self):
-        """Test that service validation errors propagate to project"""
+        """Test that service validation errors propagate to project."""
         azure = AzureConfig(resource_group="rg", registry="reg")
         service = Service(name="api", port=70000, cpu=-1)
         config = ProjectConfig(
@@ -140,10 +153,15 @@ class TestProjectConfig:
 
 
 class TestConfigParsing:
-    """Test YAML configuration parsing"""
+    """
+    Test YAML configuration parsing.
+    
+    Tests the parsing of YAML configuration files into typed Python objects,
+    including default value application and file loading.
+    """
     
     def test_parse_minimal_config(self):
-        """Test parsing minimal configuration"""
+        """Test parsing minimal configuration."""
         config_dict = {
             "name": "test-app",
             "strategy": "trunk-direct",
@@ -161,13 +179,13 @@ class TestConfigParsing:
         assert config.strategy == "trunk-direct"
         assert config.azure.resource_group == "rg-test"
         assert config.azure.registry == "testregistry"
-        assert config.azure.location == "eastus"  # default
+        assert config.azure.location == "eastus"
         assert len(config.services) == 1
         assert config.services[0].name == "api"
-        assert config.services[0].port == 8000  # default
+        assert config.services[0].port == 8000
     
     def test_parse_full_config(self):
-        """Test parsing full configuration with all fields"""
+        """Test parsing full configuration with all fields."""
         config_dict = {
             "name": "test-app",
             "strategy": "trunk-release-stage",
@@ -209,7 +227,7 @@ class TestConfigParsing:
         assert service.context == "./api"
     
     def test_load_config_from_file(self):
-        """Test loading configuration from YAML file"""
+        """Test loading configuration from YAML file."""
         config_dict = {
             "name": "test-app",
             "strategy": "trunk-release",
@@ -241,11 +259,15 @@ class TestConfigParsing:
 
 
 class TestValidStrategies:
-    """Test all valid deployment strategies"""
+    """
+    Test all valid deployment strategies.
+    
+    Ensures all documented deployment strategies are recognized as valid.
+    """
     
     @pytest.mark.parametrize("strategy", ["trunk-direct", "trunk-release", "trunk-release-stage"])
     def test_valid_strategies(self, strategy):
-        """Test that all documented strategies are valid"""
+        """Test that all documented strategies are valid."""
         azure = AzureConfig(resource_group="rg", registry="reg")
         config = ProjectConfig(
             name="test",
